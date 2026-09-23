@@ -1,0 +1,173 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local Config = require(game.ReplicatedStorage.Shared.Config)
+
+local RestaurantService = {}
+local dataService = nil
+local remotes = {}
+
+local function ensureRestaurantFolder()
+	local folder = Workspace:FindFirstChild("RestaurantRush")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "RestaurantRush"
+		folder.Parent = Workspace
+	end
+	return folder
+end
+
+local function clearOldRestaurant(model)
+	if model then
+		model:Destroy()
+	end
+end
+
+local function buildStarterRestaurant(player, state)
+	local restaurantFolder = ensureRestaurantFolder()
+	local restaurantName = player.Name .. "_Restaurant"
+	local existing = restaurantFolder:FindFirstChild(restaurantName)
+	if existing then
+		return existing
+	end
+
+	local model = Instance.new("Model")
+	model.Name = restaurantName
+	model.Parent = restaurantFolder
+
+	local base = Instance.new("Part")
+	base.Name = "Base"
+	base.Size = Vector3.new(32, 1, 20)
+	base.Position = Vector3.new(0, 0.5, 0)
+	base.Anchored = true
+	base.Color = Color3.fromRGB(76, 175, 80)
+	base.Material = Enum.Material.SmoothPlastic
+	base.Parent = model
+
+	local counter = Instance.new("Part")
+	counter.Name = "Counter"
+	counter.Size = Vector3.new(12, 2, 4)
+	counter.Position = Vector3.new(-6, 2, 4)
+	counter.Anchored = true
+	counter.Color = Color3.fromRGB(255, 201, 68)
+	counter.Material = Enum.Material.SmoothPlastic
+	counter.Parent = model
+
+	local register = Instance.new("Part")
+	register.Name = "Register"
+	register.Size = Vector3.new(2, 2, 2)
+	register.Position = Vector3.new(-8, 3, 4)
+	register.Anchored = true
+	register.Color = Color3.fromRGB(255, 255, 255)
+	register.Parent = model
+
+	local kitchenDoor = Instance.new("Part")
+	kitchenDoor.Name = "KitchenDoor"
+	kitchenDoor.Size = Vector3.new(8, 6, 1)
+	kitchenDoor.Position = Vector3.new(10, 3, -8)
+	kitchenDoor.Anchored = true
+	kitchenDoor.Color = Color3.fromRGB(255, 143, 143)
+	kitchenDoor.Parent = model
+
+	for i = 1, state.Tables do
+		local tablePart = Instance.new("Part")
+		tablePart.Name = "Table" .. i
+		tablePart.Size = Vector3.new(3, 1.5, 3)
+		tablePart.Position = Vector3.new(8 + (i * 4), 1.5, 10)
+		tablePart.Anchored = true
+		tablePart.Color = Color3.fromRGB(108, 92, 231)
+		tablePart.Parent = model
+
+		local chair = Instance.new("Part")
+		chair.Name = "Chair" .. i
+		chair.Size = Vector3.new(1.5, 2, 1.5)
+		chair.Position = Vector3.new(8 + (i * 4), 1, 14)
+		chair.Anchored = true
+		chair.Color = Color3.fromRGB(255, 255, 255)
+		chair.Parent = model
+	end
+
+	local sign = Instance.new("Part")
+	sign.Name = "Sign"
+	sign.Size = Vector3.new(8, 3, 1)
+	sign.Position = Vector3.new(0, 7, -8)
+	sign.Anchored = true
+	sign.Color = Color3.fromRGB(255, 204, 103)
+	sign.Parent = model
+
+	local nameTag = Instance.new("BillboardGui")
+	nameTag.Adornee = sign
+	nameTag.Size = UDim2.new(5, 0, 2, 0)
+	nameTag.StudsOffset = Vector3.new(0, 3, 0)
+	nameTag.Parent = sign
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Text = state.RestaurantName or Config.StartingRestaurantName
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBold
+	label.TextColor3 = Color3.fromRGB(20, 20, 20)
+	label.Parent = nameTag
+
+	model.PrimaryPart = base
+	return model
+end
+
+local function sendState(player)
+	if remotes.StateChanged then
+		remotes.StateChanged:FireClient(player, dataService:GetPlayerState(player))
+	end
+end
+
+function RestaurantService:Start(dataServiceRef, remoteTable)
+	dataService = dataServiceRef
+	remotes = remoteTable or {}
+
+	Players.PlayerAdded:Connect(function(player)
+		local state = dataService:LoadPlayer(player)
+		state.RestaurantName = state.RestaurantName or Config.StartingRestaurantName
+		state.Tables = state.Tables or Config.StartingTables
+		state.CookingStations = state.CookingStations or Config.StartingCookingStations
+		state.Money = math.max(0, state.Money or Config.StartingMoney)
+
+		dataService:SetPlayerState(player, state)
+		buildStarterRestaurant(player, state)
+		sendState(player)
+	end)
+
+	Players.PlayerRemoving:Connect(function(player)
+		dataService:SavePlayer(player)
+	end)
+
+	if remotes.RequestAction then
+		remotes.RequestAction.OnServerEvent:Connect(function(player, action, payload)
+			local state = dataService:GetPlayerState(player)
+
+			if action == "AddMoney" then
+				state.Money = (state.Money or 0) + (payload or 25)
+			elseif action == "ClaimDailyReward" then
+				local now = os.time()
+				if now - (state.LastLogin or 0) > 86400 then
+					state.Money = (state.Money or 0) + Config.DailyReward
+					state.LastLogin = now
+				end
+			elseif action == "UpgradeKitchen" then
+				state.KitchenLevel = (state.KitchenLevel or 1) + 1
+				state.Money = math.max(0, (state.Money or 0) - 150)
+			elseif action == "UpgradeDecor" then
+				state.DecorLevel = (state.DecorLevel or 1) + 1
+				state.Money = math.max(0, (state.Money or 0) - 125)
+			elseif action == "SetRestaurantName" then
+				state.RestaurantName = tostring(payload or state.RestaurantName or Config.StartingRestaurantName)
+			end
+
+			state.RestaurantLevel = math.max(1, math.floor(state.Money / 250) + 1)
+			dataService:SetPlayerState(player, state)
+			sendState(player)
+		end)
+	end
+end
+
+return RestaurantService

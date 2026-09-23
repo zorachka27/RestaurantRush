@@ -1,0 +1,39 @@
+{
+  "name": "RestaurantRush",
+  "tree": {
+    "$className": "DataModel",
+    "children": [
+      {
+        "name": "ReplicatedStorage",
+        "children": [
+          {
+            "name": "Shared",
+            "path": "src/Shared"
+          }
+        ]
+      },
+      {
+        "name": "ServerScriptService",
+        "children": [
+          {
+            "name": "Services",
+            "path": "src/ServerScriptService/Services"
+          },
+          {
+            "name": "Bootstrap.server.lua",
+            "path": "src/ServerScriptService/Bootstrap.server.lua"
+          }
+        ]
+      },
+      {
+        "name": "StarterPlayer",
+        "children": [
+          {
+            "name": "StarterPlayerScripts",
+            "path": "src/StarterPlayer/StarterPlayerScripts"
+          }
+        ]
+      }
+    ]
+  }
+}
