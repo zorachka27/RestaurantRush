@@ -2,16 +2,15 @@
 
 This repository is the foundation for a Roblox restaurant tycoon game called Restaurant Rush.
 
-## Step 1: Foundation
+## Step 1 and Step 2
 
-This step establishes the project structure and the core systems needed for future gameplay features:
+These steps establish:
 
-- Modular game configuration
-- Data saving/loading via DataStoreService
-- Starter restaurant generation
-- Player progression state
-- Remote event setup for client HUD updates
-- A simple money/upgrade loop
+- a clean Roblox project structure
+- data saving and loading via DataStoreService
+- a starter restaurant model
+- a money + progression base
+- a customer loop where NPCs enter, sit, order, wait, eat, pay, and leave
 
 ## Project structure
 
@@ -19,30 +18,30 @@ This step establishes the project structure and the core systems needed for futu
 - `src/Shared/Config.lua` — global tables for food, worker, and restaurant configuration
 - `src/ServerScriptService/Bootstrap.server.lua` — boots the server systems
 - `src/ServerScriptService/Services/DataService.lua` — safe DataStore saving/loading
-- `src/ServerScriptService/Services/RestaurantService.lua` — player state management and restaurant setup
+- `src/ServerScriptService/Services/RestaurantService.lua` — restaurant + customer flow
 - `src/StarterPlayer/StarterPlayerScripts/ClientController.client.lua` — minimal HUD and client-side sync
 
-## How to use in Roblox Studio
+## Optional Roblox Studio workflow
 
-1. Install Rojo and sync this project into Roblox Studio.
-2. Open the generated project in Studio.
-3. Press Play.
-4. A basic restaurant model will appear in Workspace and a HUD will appear on screen.
+If you want to use Roblox Studio directly without Rojo, recreate this folder structure inside the Explorer:
 
-## Current state
+- ReplicatedStorage > Shared > Config (ModuleScript)
+- ServerScriptService > Bootstrap (Script)
+- ServerScriptService > Services > DataService (ModuleScript)
+- ServerScriptService > Services > RestaurantService (ModuleScript)
+- StarterPlayer > StarterPlayerScripts > ClientController (LocalScript)
 
-This step is intentionally lightweight and modular so later steps can add:
+## Current feature focus
 
-- customers
-- workers
-- cooking stations
-- food orders
-- upgrades
-- shops
-- saved progression
-- events
-- world unlocks
+Step 2 adds the core customer loop:
 
-This is the first milestone in building the full Restaurant Rush game loop:
+- customers walk in
+- select a table
+- order food
+- wait for their food
+- eat and pay
+- leave the restaurant
+
+This is the next milestone in the full Restaurant Rush progression loop:
 
 Cook → Serve → Earn → Upgrade → Expand → Unlock
