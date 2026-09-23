@@ -1,8 +1,8 @@
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
-local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
@@ -11,10 +11,9 @@ local RestaurantService = {}
 local dataService = nil
 local remotes = {}
 local activeCustomers = {}
-
-local function makeDefaultCustomerTable()
-    return {}
-end
+local kitchenService = nil
+local workerService = nil
+local upgradeService = nil
 
 local function getRestaurantFolder()
     local folder = Workspace:FindFirstChild("RestaurantRush")
@@ -24,6 +23,31 @@ local function getRestaurantFolder()
         folder.Parent = Workspace
     end
     return folder
+end
+
+local function getPlayerSpawnPosition()
+    local spawn = Workspace:FindFirstChild("RestaurantSpawn")
+    if spawn then
+        return spawn.Position + Vector3.new(0, 3, 0)
+    end
+    return Vector3.new(0, 3, 25)
+end
+
+local function createSpawnLocation()
+    local existing = Workspace:FindFirstChild("RestaurantSpawn")
+    if existing then
+        return existing
+    end
+
+    local spawn = Instance.new("SpawnLocation")
+    spawn.Name = "RestaurantSpawn"
+    spawn.Size = Vector3.new(8, 1, 8)
+    spawn.Position = Vector3.new(0, 3, 25)
+    spawn.Anchored = true
+    spawn.Transparency = 1
+    spawn.Neutral = true
+    spawn.Parent = Workspace
+    return spawn
 end
 
 local function buildStarterRestaurant(player, state)
@@ -37,11 +61,12 @@ local function buildStarterRestaurant(player, state)
     local model = Instance.new("Model")
     model.Name = restaurantName
     model.Parent = restaurantFolder
+    model:PivotTo(CFrame.new(0, 0, -30))
 
     local base = Instance.new("Part")
     base.Name = "Base"
     base.Size = Vector3.new(40, 1, 26)
-    base.Position = Vector3.new(0, 0.5, 0)
+    base.Position = Vector3.new(0, 0.5, -30)
     base.Anchored = true
     base.Color = Color3.fromRGB(129, 199, 132)
     base.Material = Enum.Material.SmoothPlastic
@@ -50,7 +75,7 @@ local function buildStarterRestaurant(player, state)
     local entrance = Instance.new("Part")
     entrance.Name = "Entrance"
     entrance.Size = Vector3.new(8, 6, 1)
-    entrance.Position = Vector3.new(-12, 3, 0)
+    entrance.Position = Vector3.new(-12, 3, -30)
     entrance.Anchored = true
     entrance.Color = Color3.fromRGB(255, 173, 59)
     entrance.Parent = model
@@ -58,7 +83,7 @@ local function buildStarterRestaurant(player, state)
     local counter = Instance.new("Part")
     counter.Name = "Counter"
     counter.Size = Vector3.new(12, 2, 4)
-    counter.Position = Vector3.new(5, 2, -3)
+    counter.Position = Vector3.new(5, 2, -33)
     counter.Anchored = true
     counter.Color = Color3.fromRGB(255, 213, 79)
     counter.Parent = model
@@ -66,7 +91,7 @@ local function buildStarterRestaurant(player, state)
     local register = Instance.new("Part")
     register.Name = "Register"
     register.Size = Vector3.new(2, 2, 2)
-    register.Position = Vector3.new(9, 3, -3)
+    register.Position = Vector3.new(9, 3, -33)
     register.Anchored = true
     register.Color = Color3.fromRGB(255, 255, 255)
     register.Parent = model
@@ -74,7 +99,7 @@ local function buildStarterRestaurant(player, state)
     local kitchen = Instance.new("Part")
     kitchen.Name = "Kitchen"
     kitchen.Size = Vector3.new(8, 6, 8)
-    kitchen.Position = Vector3.new(12, 3, 8)
+    kitchen.Position = Vector3.new(12, 3, -22)
     kitchen.Anchored = true
     kitchen.Color = Color3.fromRGB(255, 118, 117)
     kitchen.Parent = model
@@ -84,7 +109,7 @@ local function buildStarterRestaurant(player, state)
         local table = Instance.new("Part")
         table.Name = "Table" .. index
         table.Size = Vector3.new(3, 1.5, 3)
-        table.Position = Vector3.new(8 + (index * 5), 1.5, 8)
+        table.Position = Vector3.new(8 + (index * 5), 1.5, -22)
         table.Anchored = true
         table.Color = Color3.fromRGB(112, 128, 144)
         table.Parent = model
@@ -92,7 +117,7 @@ local function buildStarterRestaurant(player, state)
         local chair = Instance.new("Part")
         chair.Name = "Chair" .. index
         chair.Size = Vector3.new(1.5, 2, 1.5)
-        chair.Position = Vector3.new(8 + (index * 5), 1, 12)
+        chair.Position = Vector3.new(8 + (index * 5), 1, -18)
         chair.Anchored = true
         chair.Color = Color3.fromRGB(255, 255, 255)
         chair.Parent = model
@@ -101,7 +126,7 @@ local function buildStarterRestaurant(player, state)
     local sign = Instance.new("Part")
     sign.Name = "RestaurantSign"
     sign.Size = Vector3.new(10, 4, 1)
-    sign.Position = Vector3.new(0, 7, -10)
+    sign.Position = Vector3.new(0, 7, -40)
     sign.Anchored = true
     sign.Color = Color3.fromRGB(255, 188, 87)
     sign.Parent = model
@@ -128,7 +153,7 @@ end
 local function getActiveCustomersForPlayer(player)
     local userId = player.UserId
     if activeCustomers[userId] == nil then
-        activeCustomers[userId] = makeDefaultCustomerTable()
+        activeCustomers[userId] = {}
     end
     return activeCustomers[userId]
 end
@@ -182,7 +207,7 @@ local function getEntrancePosition(model)
             return entrance.Position + Vector3.new(0, 2, 0)
         end
     end
-    return Vector3.new(-12, 3, 0)
+    return Vector3.new(-12, 3, -30)
 end
 
 local function getExitPosition(model)
@@ -192,7 +217,7 @@ local function getExitPosition(model)
             return exitPart.Position + Vector3.new(-8, 2, 0)
         end
     end
-    return Vector3.new(-22, 3, 0)
+    return Vector3.new(-22, 3, -30)
 end
 
 local function setCustomerText(customer, text)
@@ -261,6 +286,7 @@ local function createCustomerModel(player, orderName, tableIndex)
         state = "WalkingIn",
         reward = Config.FoodCatalog[orderName] and Config.FoodCatalog[orderName].price or 18,
         tip = math.random(4, 14),
+        foodReady = false,
     }
 end
 
@@ -304,7 +330,11 @@ local function startCustomerPatienceLoop(player, customer)
     task.spawn(function()
         while customer and customer.model and customer.model.Parent do
             task.wait(1)
-            customer.waited = customer.waited + 1
+            customer.waited += 1
+
+            if customer.foodReady then
+                return
+            end
 
             if customer.waited >= customer.patience then
                 setCustomerText(customer, "Too slow!")
@@ -312,6 +342,7 @@ local function startCustomerPatienceLoop(player, customer)
                 local state = dataService:GetPlayerState(player)
                 state.Rating = math.max(1, (state.Rating or 4.5) - 0.3)
                 dataService:SetPlayerState(player, state)
+
                 if remotes.StateChanged then
                     remotes.StateChanged:FireClient(player, state)
                 end
@@ -363,23 +394,38 @@ local function startCustomerFlow(player, customer)
         end
 
         customer.state = "Waiting"
-        setCustomerText(customer, "Order: " .. customer.orderName)
+        setCustomerText(customer, "Waiting for order...")
         startCustomerPatienceLoop(player, customer)
 
-        task.delay(math.random(5, 9), function()
-            if not customer.model or not customer.model.Parent then
-                return
-            end
-
-            customer.state = "Eating"
-            setCustomerText(customer, "Enjoying " .. customer.orderName)
-
-            task.delay(math.random(3, 5), function()
+        if kitchenService and kitchenService.QueueOrder then
+            kitchenService:QueueOrder(player, customer.orderName, function()
                 if customer.model and customer.model.Parent then
-                    handleCustomerPayment(player, customer)
+                    customer.foodReady = true
+                    customer.state = "Eating"
+                    setCustomerText(customer, "Enjoying " .. customer.orderName)
+
+                    task.delay(math.random(3, 5), function()
+                        if customer.model and customer.model.Parent then
+                            handleCustomerPayment(player, customer)
+                        end
+                    end)
                 end
             end)
-        end)
+        else
+            task.delay(math.random(5, 9), function()
+                if customer.model and customer.model.Parent then
+                    customer.foodReady = true
+                    customer.state = "Eating"
+                    setCustomerText(customer, "Enjoying " .. customer.orderName)
+
+                    task.delay(math.random(3, 5), function()
+                        if customer.model and customer.model.Parent then
+                            handleCustomerPayment(player, customer)
+                        end
+                    end)
+                end
+            end)
+        end
     end)
 end
 
@@ -436,9 +482,14 @@ local function syncPlayerState(player)
     end
 end
 
-function RestaurantService:Start(dataServiceRef, remoteTable)
+function RestaurantService:Start(dataServiceRef, remoteTable, kitchenServiceRef, workerServiceRef, upgradeServiceRef)
     dataService = dataServiceRef
     remotes = remoteTable or {}
+    kitchenService = kitchenServiceRef
+    workerService = workerServiceRef
+    upgradeService = upgradeServiceRef
+
+    createSpawnLocation()
 
     Players.PlayerAdded:Connect(function(player)
         local state = dataService:LoadPlayer(player)
@@ -447,11 +498,13 @@ function RestaurantService:Start(dataServiceRef, remoteTable)
         state.CookingStations = state.CookingStations or Config.StartingCookingStations
         state.Money = math.max(0, state.Money or Config.StartingMoney)
         state.Rating = math.max(1, math.min(5, state.Rating or Config.StartingRating))
+        state.UpgradeLevels = state.UpgradeLevels or {}
+        state.Workers = state.Workers or { Chef = 0, Waiter = 0, Cleaner = 0, Cashier = 0, Manager = 0 }
+        state.WorkerLevels = state.WorkerLevels or { Chef = 1, Waiter = 1, Cleaner = 1, Cashier = 1, Manager = 1 }
 
         dataService:SetPlayerState(player, state)
         buildStarterRestaurant(player, state)
         syncPlayerState(player)
-
         startSpawnLoop(player)
     end)
 
@@ -479,6 +532,15 @@ function RestaurantService:Start(dataServiceRef, remoteTable)
                     state.Money = (state.Money or 0) + Config.DailyReward
                     state.LastLogin = now
                 end
+            elseif action == "HireWorker" and workerService then
+                local workerType = payload
+                workerService:HireWorker(player, workerType)
+            elseif action == "UpgradeWorker" and workerService then
+                local workerType = payload
+                workerService:UpgradeWorker(player, workerType)
+            elseif action == "UpgradeRestaurant" and upgradeService then
+                local upgradeName = payload
+                upgradeService:Upgrade(player, upgradeName)
             elseif action == "UpgradeKitchen" then
                 state.KitchenLevel = (state.KitchenLevel or 1) + 1
                 state.Money = math.max(0, (state.Money or 0) - 150)

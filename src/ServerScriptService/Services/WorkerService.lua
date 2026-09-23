@@ -78,6 +78,7 @@ function WorkerService:ProcessPassiveIncome()
             for _, player in ipairs(Players:GetPlayers()) do
                 local state = getState(player)
                 local income = 0
+
                 for workerType, count in pairs(state.Workers or {}) do
                     local info = Config.WorkerCatalog[workerType]
                     local level = (state.WorkerLevels and state.WorkerLevels[workerType]) or 1
@@ -85,6 +86,7 @@ function WorkerService:ProcessPassiveIncome()
                         income += count * (info.baseCost / 90) * (1 + ((level - 1) * 0.35))
                     end
                 end
+
                 if income > 0 then
                     state.Money = (state.Money or 0) + math.floor(income)
                     dataService:SetPlayerState(player, state)

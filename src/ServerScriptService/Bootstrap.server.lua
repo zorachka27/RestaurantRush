@@ -1,8 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DataService = require(script.Parent.Services.DataService)
-local RestaurantService = require(script.Parent.Services.RestaurantService)
 local KitchenService = require(script.Parent.Services.KitchenService)
+local RestaurantService = require(script.Parent.Services.RestaurantService)
 local WorkerService = require(script.Parent.Services.WorkerService)
 local UpgradeService = require(script.Parent.Services.UpgradeService)
 
