@@ -6,7 +6,7 @@ sharedFolder.Parent = ReplicatedStorage
 
 local DataService = require(script.Parent.Services.DataService)
 local RestaurantService = require(script.Parent.Services.RestaurantService)
-local KitchenService = require(script.Parent.Services.KitchenService)
+local WorkerService = require(script.Parent.Services.WorkerService)
 
 local restaurantFolder = ReplicatedStorage:FindFirstChild("RestaurantRush") or Instance.new("Folder")
 restaurantFolder.Name = "RestaurantRush"
@@ -23,9 +23,9 @@ requestActionEvent.Parent = restaurantFolder
 RestaurantService:Start(DataService, {
     StateChanged = stateChangedEvent,
     RequestAction = requestActionEvent,
-}, KitchenService)
+}, WorkerService)
 
-KitchenService:Start(DataService, {
+WorkerService:Start(DataService, {
     StateChanged = stateChangedEvent,
     RequestAction = requestActionEvent,
 })
