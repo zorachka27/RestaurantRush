@@ -1,11 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local sharedFolder = ReplicatedStorage:FindFirstChild("Shared") or Instance.new("Folder")
-sharedFolder.Name = "Shared"
-sharedFolder.Parent = ReplicatedStorage
-
 local DataService = require(script.Parent.Services.DataService)
 local RestaurantService = require(script.Parent.Services.RestaurantService)
+local KitchenService = require(script.Parent.Services.KitchenService)
 local WorkerService = require(script.Parent.Services.WorkerService)
 local UpgradeService = require(script.Parent.Services.UpgradeService)
 
@@ -21,19 +18,14 @@ local requestActionEvent = restaurantFolder:FindFirstChild("RequestAction") or I
 requestActionEvent.Name = "RequestAction"
 requestActionEvent.Parent = restaurantFolder
 
-RestaurantService:Start(DataService, {
+local remotes = {
     StateChanged = stateChangedEvent,
     RequestAction = requestActionEvent,
-}, WorkerService)
+}
 
-WorkerService:Start(DataService, {
-    StateChanged = stateChangedEvent,
-    RequestAction = requestActionEvent,
-})
-
-UpgradeService:Start(DataService, {
-    StateChanged = stateChangedEvent,
-    RequestAction = requestActionEvent,
-})
+KitchenService:Start(DataService, remotes)
+WorkerService:Start(DataService, remotes)
+UpgradeService:Start(DataService, remotes)
+RestaurantService:Start(DataService, remotes, KitchenService, WorkerService, UpgradeService)
 
 print("Restaurant Rush foundation initialized.")
